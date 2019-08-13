@@ -1,3 +1,4 @@
 
 .DS_Store
 DiscordBot/auth.json
+DiscordBot/node_modules/
