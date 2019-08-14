@@ -1,39 +1,32 @@
+// [ V A R I A B L E S ]
 var Discord = require('discord.io');
 var logger = require('winston');
 var auth = require('./auth.json');
-// Configure logger settings
+var random = Math.floor((Math.random() * 3) + 1);
+
+// [ L O G G E R   S E T T I N G S ]
 logger.remove(logger.transports.Console);
 logger.add(new logger.transports.Console, {
     colorize: true
 });
 logger.level = 'debug';
-// Initialize Discord Bot
+
+// [ I N I T I A L I Z E   B O T ]
 var bot = new Discord.Client({
    token: auth.token,
    autorun: true
 });
+
 bot.on('ready', function (evt) {
     logger.info('Connected');
     logger.info('Logged in as: ');
     logger.info(bot.username + ' - (' + bot.id + ')');
 });
-bot.on('message', function (user, userID, channelID, message, evt) {
-    // Our bot needs to know if it will execute a command
-    // It will listen for messages that will start with `!`
-    if (message.substring(0, 1) == '!') {
-        var args = message.substring(1).split(' ');
-        var cmd = args[0];
 
-        args = args.splice(1);
-        switch(cmd) {
-            // !ping
-            case 'ping':
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'Welcome to Panthera baby!'
-                });
-            break;
-            // Just add any case commands if you want to..
-         }
-     }
+// [ W E L C O M E   P L A Y E R ]
+bot.on('guildMemberAdd', function (member) {
+    bot.sendMessage({
+        to: '609978851778363404',
+        message: 'Welcome to the server!'
+    });
 });
