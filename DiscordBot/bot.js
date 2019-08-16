@@ -2,7 +2,6 @@
 var Discord = require('discord.io');
 var logger = require('winston');
 var auth = require('./auth.json');
-var random = Math.floor((Math.random() * 5) + 1);
 var introMessage;
 
 // [ L O G G E R   S E T T I N G S ]
@@ -34,6 +33,7 @@ function get_user(memberID) {
 bot.on('guildMemberAdd', function (member) {
     var joiner = get_user(member.id);
     var name =  joiner.username;
+    var random = Math.floor((Math.random() * 5) + 1);
 
     if(random == 1){
         introMessage = 'Welcome to the clan ' + name + '!';
