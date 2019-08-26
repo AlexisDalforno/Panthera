@@ -2,6 +2,13 @@
 var Discord = require('discord.io');
 var logger = require('winston');
 var auth = require('./auth.json');
+var request = require('request');
+var config = require('./config.json');
+var mcip = config.ip;
+var mcport = config.port;
+
+var mcapi = 'http://mcapi.us/server/status?ip=' + mcip + '&port=' + mcport;
+
 var introMessage;
 
 // [ L O G G E R   S E T T I N G S ]
@@ -51,4 +58,30 @@ bot.on('guildMemberAdd', function (member) {
         to: '609978851778363404',
         message: introMessage
     });
+});
+
+// [ G E T   M C   S E R V E R   S T A T U S ]
+function update(channelID) {
+    request(mcapi, function(err, response, body) {
+         body = JSON.parse(body);
+         if(body.online) {
+            bot.sendMessage({
+                to: channelID,
+                message: 'Server is online! \n' +
+                body.players.now + ' playing currently.'
+            });
+         } else {
+            bot.sendMessage({
+                to: channelID,
+                message: 'Server is down!'
+            });
+         }
+    });
+}
+
+bot.on('message', function(user, userID, channelID, message, event) {
+    if(message.match(/status/i))
+    {
+        update(channelID);
+    }
 });
