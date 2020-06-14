@@ -1,8 +1,8 @@
 {
   "name": "minecraftserver-bot",
   "version": "1.0.1",
-  "description": "My First Discord Bot",
-  "main": "bot.js",
+  "description": "Personal bot used for minecraft server status as well as D&D related.",
+  "main": "panthera.js",
   "author": "Alexis Dalforno",
   "dependencies": {
     "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
