@@ -26,6 +26,7 @@ client.on('message', message => {
             roll(message, args);
             break;
 
+        case "help":
         default:
             commands(message);
             break;
@@ -36,7 +37,7 @@ client.on('message', message => {
 function roll(message, args) {
     if (!args.length || args[0].charAt(0) != 'd') {
         return message.channel.send(`You didn't provide a dice, ${message.author}! \n \
-        usage: !roll d[number] [quantity] [modifier]`);
+        \`usage: !roll d[number] [quantity] [modifier]\``);
     }
     
     var diceRoll = 20;
@@ -52,7 +53,8 @@ function roll(message, args) {
     if (args.length > 1 && !isNaN(args[1])) quantity = Math.floor(args[1]);
     if (args.length > 2 && !isNaN(args[2])) modifier = Math.floor(args[2]);
 
-    if (quantity > 5) return message.channel.send(`${quantity} is too many dice. Stop.`);
+    if (quantity > 5) return message.channel.send(`${quantity} is too many dice. 5 dice max.`);
+    if (modifier > 20) return message.reply('Yeah I bet you wish you were that OP. Try less than 20 for your modifier bub.');
 
     message.channel.send(`Rolling ${quantity} d${diceRoll} with a modifier of ${modifier}...`);
 
@@ -64,10 +66,9 @@ function roll(message, args) {
 
 // [ C O M M A N D   H E L P ]
 function commands(message) {
-    message.channel.send("Looks like you suck at commands, let me help you with that: \n \
-                          !roll d[number] [quantity] [modifier] || Will roll [quantity] dice of [number] sides + [modifier]. \
-                                                                   Defaults to 1 d20 + 0.\n \
-                          !status                               || Checks Panthera MC server status.");
+    message.channel.send("**Looks like you suck at commands, let me help you with that:**\n\
+    \`!roll d[number] [quantity] [modifier]\` \n\
+    *Will roll [quantity] dice of [number] sides + [modifier]. Defaults to 1 d20 + 0.*\n ");
 }
 
 
