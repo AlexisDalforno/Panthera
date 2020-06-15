@@ -1,87 +1,74 @@
 // [ V A R I A B L E S ]
-var Discord = require('discord.io');
-var logger = require('winston');
-var auth = require('./auth.json');
-var request = require('request');
-var config = require('./config.json');
-var mcip = config.ip;
-var mcport = config.port;
+const Discord = require('discord.js');
+const { token } = require('./auth.json');
+const config = require('./config.json');
+const prefix = config.prefix;
 
-var mcapi = 'http://mcapi.us/server/status?ip=' + mcip + '&port=' + mcport;
 
-var introMessage;
-
-// [ L O G G E R   S E T T I N G S ]
-logger.remove(logger.transports.Console);
-logger.add(new logger.transports.Console, {
-    colorize: true
-});
-logger.level = 'debug';
+const dice = ['4', '6', '8', '10', '12', '20'];
 
 // [ I N I T I A L I Z E   B O T ]
-var bot = new Discord.Client({
-   token: auth.token,
-   autorun: true
+const client = new Discord.Client();
+
+client.once('ready', () => {
+    console.log('Connected');
 });
 
-bot.on('ready', function (evt) {
-    logger.info('Connected');
-    logger.info('Logged in as: ');
-    logger.info(bot.username + ' - (' + bot.id + ')');
-});
+// [ C O M M A N D   H A N D L E R ]
+client.on('message', message => {
+    if (!message.content.startsWith(prefix) || message.author.bot) return;
 
-// [ G E T   U S E R   O B J E C T ]
-function get_user(memberID) {
-    var user = bot.users[memberID];
-    return user;
-}
+    const args = message.content.slice(prefix.length).split(/ +/);
+    const command = args.shift().toLowerCase();
 
-// [ W E L C O M E   P L A Y E R ]
-bot.on('guildMemberAdd', function (member) {
-    var joiner = get_user(member.id);
-    var name =  joiner.username;
-    var random = Math.floor((Math.random() * 5) + 1);
+    switch (command) {
+        case "roll":
+            roll(message, args);
+            break;
 
-    if(random == 1){
-        introMessage = 'Welcome to the clan ' + name + '!';
-    } else if(random == 2){
-        introMessage = name + ' is here ready to eat some eggplant.';
-    } else if(random == 3){
-        introMessage = 'WAZZZZZZZZZUUUUUUUUUUPPPPPPPPPPPPPPPP ' + name + '!';
-    } else if(random == 4){
-        introMessage = 'Touch my holdyflaps ' + name;
-    } else if(random == 5){
-        introMessage = 'A wild ' + name + ' has appeared.';
-    }
-
-    bot.sendMessage({
-        to: '609978851778363404',
-        message: introMessage
-    });
-});
-
-// [ G E T   M C   S E R V E R   S T A T U S ]
-function update(channelID) {
-    request(mcapi, function(err, response, body) {
-         body = JSON.parse(body);
-         if(body.online) {
-            bot.sendMessage({
-                to: channelID,
-                message: 'Server is online! \n' +
-                body.players.now + ' playing currently.'
-            });
-         } else {
-            bot.sendMessage({
-                to: channelID,
-                message: 'Server is down!'
-            });
-         }
-    });
-}
-
-bot.on('message', function(user, userID, channelID, message, event) {
-    if(message.match(/status/i))
-    {
-        update(channelID);
+        default:
+            commands(message);
+            break;
     }
 });
+
+// [ D I C E   R O L L S ]
+function roll(message, args) {
+    if (!args.length || args[0].charAt(0) != 'd') {
+        return message.channel.send(`You didn't provide a dice, ${message.author}! \n \
+        usage: !roll d[number] [quantity] [modifier]`);
+    }
+    
+    var diceRoll = 20;
+    var quantity = 1;
+    var modifier = 0;
+
+    if (args[0].length > 1 && !isNaN(args[0].substr(1))) {
+        diceRoll = args[0].substr(1);
+        if (!dice.includes(diceRoll)) 
+            return message.channel.send(`${args[0]} is not a valid dice type.`); 
+    }
+
+    if (args.length > 1 && !isNaN(args[1])) quantity = Math.floor(args[1]);
+    if (args.length > 2 && !isNaN(args[2])) modifier = Math.floor(args[2]);
+
+    if (quantity > 5) return message.channel.send(`${quantity} is too many dice. Stop.`);
+
+    message.channel.send(`Rolling ${quantity} d${diceRoll} with a modifier of ${modifier}...`);
+
+    for (var i = 0; i < quantity; i++) {
+        var result = Math.floor((Math.random() * diceRoll) + 1) + modifier;
+        message.channel.send(`Dice roll #${i+1}:\n${result}\n`);
+    }
+}
+
+// [ C O M M A N D   H E L P ]
+function commands(message) {
+    message.channel.send("Looks like you suck at commands, let me help you with that: \n \
+                          !roll d[number] [quantity] [modifier] || Will roll [quantity] dice of [number] sides + [modifier]. \
+                                                                   Defaults to 1 d20 + 0.\n \
+                          !status                               || Checks Panthera MC server status.");
+}
+
+
+client.login(token);
