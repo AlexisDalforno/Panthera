@@ -2,8 +2,8 @@
 const Discord = require('discord.js');
 const { token } = require('./auth.json');
 const config = require('./config.json');
+const fs = require('fs');
 const prefix = config.prefix;
-
 
 const dice = ['4', '6', '8', '10', '12', '20'];
 
@@ -26,6 +26,10 @@ client.on('message', message => {
             roll(message, args);
             break;
 
+        case "new-char":
+            newCharacter(message, args);
+            break;
+
         case "help":
         default:
             commands(message);
@@ -36,8 +40,8 @@ client.on('message', message => {
 // [ D I C E   R O L L S ]
 function roll(message, args) {
     if (!args.length || args[0].charAt(0) != 'd') {
-        return message.channel.send(`You didn't provide a dice, ${message.author}! \n \
-        \`usage: !roll d[number] [quantity] [modifier]\``);
+        return message.channel.send(`You didn't provide a dice, ${message.author}! \n` +
+        `\`usage: !roll d[number] [quantity] [modifier]\``);
     }
     
     var diceRoll = 20;
@@ -66,10 +70,84 @@ function roll(message, args) {
 
 // [ C O M M A N D   H E L P ]
 function commands(message) {
-    message.channel.send("**Looks like you suck at commands, let me help you with that:**\n\
-    \`!roll d[number] [quantity] [modifier]\` \n\
-    *Will roll [quantity] dice of [number] sides + [modifier]. Defaults to 1 d20 + 0.*\n ");
+    message.channel.send("**Looks like you suck at commands, let me help you with that:**\n" +
+                        "Note: [] represents an optional argument.\n" +
+                        "--------------\n" + 
+                        "`!roll d[number] [quantity] [modifier]` \n" +
+                        "*Will roll [quantity] dice of [number] sides + [modifier]. Defaults to 1 d20 + 0. Valid dice: 4, 6, 8, 10, 12, 20.*\n" +
+                        "--------------\n" + 
+                        "`!new-char name age race m/f` \n" +
+                        "*Creates new character with given info. Age must be number representation between 17-1000 e.g. 20. For sex provide \"m\" or \"f\".*");
 }
 
+// [ C H A R A C T E R   C R E A T E ]
+function newCharacter(message, args) {
+    var user = message.author.username;
+    var name, age, race, sex;
+
+    fs.readFile('./characters.json', 'utf-8', function(err, data) {
+        if (err) throw err
+    
+        var characterArr = JSON.parse(data); 
+
+        for (var i = 0; i < characterArr.charas.length; i++) {
+            if(user in characterArr.charas[i]){
+                message.channel.send("You already have a character! If you would like to make a new one, " +
+                                        "please use `!del-char` and try again.");
+                return;
+            }
+        }
+
+        if (args.length != 4) {
+            return message.channel.send("`usage: !new-char name age race m/f`");
+        }
+    
+        name = args[0];
+    
+        if (isNaN(args[1]) || args[1] > 1000 || args[1] < 17) {
+            return message.channel.send(`${args[1]} is invalid age argument. Please give a numerical value between 17-1000.`);
+        }
+    
+        age = Math.floor(args[1]);
+        race = args[2];
+    
+        if (args[3] != 'm' && args[3] != 'f') {
+            return message.channel.send(`${args[3]} is invalid sex. Use only m or f for sex argument.`);
+        }
+    
+        sex = args[3];
+
+        let chara = {
+            [user]: {
+                info: {
+                    name : name,
+                    age : age,
+                    race : race,
+                    sex : sex
+                },
+                stats: {
+                    health : 0,
+                    exp : 0,
+                    lvl : 1,
+                    strength : 0,
+                    intelligence : 0,
+                    dexterity : 0,
+                    charisma : 0
+                },
+                items: {
+                    gold : 0
+                }
+            }
+        }
+
+        characterArr.charas.push(chara);
+    
+        fs.writeFile('./characters.json', JSON.stringify(characterArr, null, 2), 'utf-8', function(err) {
+            if (err) throw err
+        });
+
+        message.channel.send(`Welcome to the team ${name}! Use the command \`!char-stats\` to set stats and \`!char-inv\` to fill your inventory.`);
+    });
+}
 
 client.login(token);

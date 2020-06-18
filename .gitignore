@@ -4,3 +4,4 @@ DiscordBot/auth.json
 DiscordBot/node_modules/
 DiscordBot/package-lock.json
 DiscordBot/config.json
+DiscordBot/characters.json
