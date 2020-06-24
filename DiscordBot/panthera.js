@@ -27,7 +27,7 @@ client.on('message', message => {
             break;
 
         case "new-char":
-            newCharacter(message, args);
+            newCharacter(message, message.content.slice(prefix.length).split(/:/));
             break;
 
         case "del-char":
@@ -40,6 +40,22 @@ client.on('message', message => {
 
         case "char-inv":
             setInv(message, args);
+            break;
+
+        case "health":
+            adjustHealth(message, args);
+            break;
+
+        case "exp":
+            addXP(message, args);
+            break;
+        
+        case "help-dm":
+            dmCommands(message);
+            break;
+
+        case "add-stat":
+            adjustStat(message, args);
             break;
 
         case "help":
@@ -87,24 +103,38 @@ function commands(message) {
                         "`!roll d[number] [quantity] [modifier]` \n" +
                         "*Will roll [quantity] dice of [number] sides + [modifier]. Defaults to 1 d20 + 0. Valid dice: 4, 6, 8, 10, 12, 20.*\n" +
                         "--------------\n" + 
-                        "`!new-char name age race m/f` \n" +
-                        "*Creates new character with given info. Age must be number representation between 17-1000 e.g. 20. For sex provide \"m\" or \"f\".*\n" +
+                        "`!new-char name : age : race : m/f` \n" +
+                        "*Creates new character with given info. Age must be number representation between 17-1000 e.g. 20. For sex provide \"m\" or \"f\". Separate each argument with a colon.*\n" +
                         "--------------\n" + 
                         "`!del-char` \n" +
                         "*Deletes character from database.*\n" +
                         "--------------\n" + 
                         "`!char-stats health str int dex char` \n" +
-                        "*Adds player health and sets stats. Give each stat a number between 1-4 as a ranking of where you want most points to go towards.*" +
+                        "*Adds player health and sets stats. Give each stat a number between 1-4 as a ranking of where you want most points to go towards.*\n" +
                         "--------------\n" + 
                         "`!char-inv gold [item1] : [item2]` \n" +
                         "*Sets initial inventory with amount of gold and the option of two separate items. Separate each item with a colon.*");
 }
 
+function dmCommands(message) {
+    if (message.author.username != 'Gazorpazorpfield') return message.channel.send("You are not authorized to use this command.");
+    message.channel.send("**Hello Master, here are your powers:**\n" +
+                        "--------------\n" + 
+                        "`!health user amount` \n" +
+                        "*Will subtract or add health to characters current health.*\n"+
+                        "--------------\n" + 
+                        "`!exp user amount` \n" +
+                        "*Will add experience to characters current exp.*\n" +
+                        "--------------\n" + 
+                        "`!add-stat user stat` \n" +
+                        "*Add +1 to the players provided stat.*\n")
+}
+
 // [ C H A R A C T E R   C R E A T E ]
 function newCharacter(message, args) {
     var user = message.author.username;
-    var name, age, race, sex;
-
+    var name = "", age = 0, race = "", sex = 0;
+    
     fs.readFile('./characters.json', 'utf-8', function(err, data) {
         if (err) throw err
     
@@ -118,18 +148,17 @@ function newCharacter(message, args) {
             }
         }
 
-        if (args.length != 4) return message.channel.send("`usage: !new-char name age race m/f`");
-    
-        name = args[0];
+        if (args.length != 4) return message.channel.send("`usage: !new-char name : age : race : m/f`");
+        
+        name = args[0].slice(8);
     
         if (isNaN(args[1]) || args[1] > 1000 || args[1] < 17) 
             return message.channel.send(`${args[1]} is invalid age argument. Please give a numerical value between 17-1000.`);
 
-    
         age = Math.floor(args[1]);
         race = args[2];
     
-        if (args[3] != 'm' && args[3] != 'f') 
+        if (args[3].trim() != 'm' && args[3].trim() != 'f') 
             return message.channel.send(`${args[3]} is invalid sex. Use only m or f for sex argument.`);
 
         sex = args[3];
@@ -137,10 +166,10 @@ function newCharacter(message, args) {
         let chara = {
             [user]: {
                 info: {
-                    name : name,
+                    name : name.trim(),
                     age : age,
-                    race : race,
-                    sex : sex
+                    race : race.trim(),
+                    sex : sex.trim()
                 },
                 stats: {
                     health : 0,
@@ -272,6 +301,91 @@ function setInv(message, args) {
         fs.writeFile('./characters.json', JSON.stringify(characterArr, null, 2), 'utf-8', function(err) {if (err) throw err});
 
         message.channel.send("Inventory successfully filled!");
+    });
+}
+
+// [ T A K E   D A M A G E ]
+function adjustHealth(message, args) {
+    if (message.author.username != 'Gazorpazorpfield') return message.channel.send("You are not authorized to use this command.");
+
+    var character = args[0];
+    var adjustment = parseInt(args[1]);
+
+    fs.readFile('./characters.json', 'utf-8', function(err, data) {
+        if (err) throw err;
+
+        var characterArr = JSON.parse(data); 
+        var newHealth;
+
+        for (var i = 0; i < characterArr.charas.length; i++) {
+            if(character in characterArr.charas[i]) {
+                characterArr.charas[i][character].stats.health += adjustment; 
+                newHealth = characterArr.charas[i][character].stats.health;
+            }
+        }
+
+        fs.writeFile('./characters.json', JSON.stringify(characterArr, null, 2), 'utf-8', function(err) {if (err) throw err});
+
+        message.channel.send(`Health has been successfully adjusted. Health is now at ${newHealth} points.`);
+    });
+}
+
+// [ I N C R E A S E   E X P E R I E N C E ]
+function addXP(message, args) {
+    if (message.author.username != 'Gazorpazorpfield') return message.channel.send("You are not authorized to use this command.");
+
+    var character = args[0];
+    var adjustment = parseInt(args[1]);
+
+    fs.readFile('./characters.json', 'utf-8', function(err, data) {
+        if (err) throw err;
+
+        var characterArr = JSON.parse(data); 
+
+        for (var i = 0; i < characterArr.charas.length; i++) {
+            if(character in characterArr.charas[i]) {
+                characterArr.charas[i][character].stats.exp += adjustment; 
+
+                var currXP = characterArr.charas[i][character].stats.exp;
+                var currLvl = characterArr.charas[i][character].stats.lvl;
+
+                if (currXP >= (currLvl * (currLvl + 1)) * 14) {
+                    currLvl++;
+                    characterArr.charas[i][character].stats.lvl = currLvl;
+                    message.channel.send(`You have leveled up! Congratulations! You are now level ${currLvl}.`);
+                } 
+                
+                message.channel.send(`Your exp has been adjusted, you are now at ${currXP} exp.`);
+            }
+        }
+
+        fs.writeFile('./characters.json', JSON.stringify(characterArr, null, 2), 'utf-8', function(err) {if (err) throw err});
+    });
+}
+
+// [ A D J U S T   S T A T S ]
+function adjustStat(message, args) {
+    if (message.author.username != 'Gazorpazorpfield') return message.channel.send("You are not authorized to use this command.");
+
+    var character = args[0];
+    var stat = args[1];
+
+    fs.readFile('./characters.json', 'utf-8', function(err, data) {
+        if (err) throw err;
+
+        var characterArr = JSON.parse(data); 
+
+        for (var i = 0; i < characterArr.charas.length; i++) {
+            if(character in characterArr.charas[i]) {
+                characterArr.charas[i][character].stats[stat]++; 
+
+                var points = characterArr.charas[i][character].stats[stat];
+
+                message.channel.send(`${stat} has been adjusted to ${points} points.`);
+            }
+        }
+
+        fs.writeFile('./characters.json', JSON.stringify(characterArr, null, 2), 'utf-8', function(err) {if (err) throw err});
     });
 }
 
